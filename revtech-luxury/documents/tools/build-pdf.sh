@@ -26,16 +26,15 @@ echo "› rendering markdown"
 npx --yes marked --gfm -i "$SRC" -o "$WORK/body.html"
 
 echo "› assembling html"
-{
-  cat "$HERE/template-head.html"
-  cat "$WORK/body.html"
-  printf '</body></html>\n'
-} > "$WORK/doc.html"
+cat "$HERE/template-head.html" "$WORK/body.html" "$HERE/template-foot.html" > "$WORK/doc.html"
 
+# Mermaid renders the ERD client-side, so Chrome needs time on the clock for the
+# CDN fetch plus layout before the page is printed.
 echo "› printing pdf"
 "$CHROME" --headless=new --disable-gpu --no-sandbox \
   --no-pdf-header-footer \
-  --virtual-time-budget=10000 \
+  --virtual-time-budget=30000 \
+  --run-all-compositor-stages-before-draw \
   --print-to-pdf="$WORK/out.pdf" \
   "file://$WORK/doc.html" 2>/dev/null
 

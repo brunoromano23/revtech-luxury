@@ -163,10 +163,23 @@
   ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
   li { margin-bottom: 1.2mm; }
 
+  /* ---- diagrams -------------------------------------------------------- */
+
+  .mermaid {
+    text-align: center;
+    margin: 4mm 0 6mm;
+    break-inside: avoid;
+  }
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
   /* ---- pagination ------------------------------------------------------ */
 
   h2, h3 { break-after: avoid; }
   h2 + table, h3 + table, h2 + p, h3 + p { break-before: avoid; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 </head>
 <body>
