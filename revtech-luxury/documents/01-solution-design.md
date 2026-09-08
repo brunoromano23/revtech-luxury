@@ -153,6 +153,8 @@ Modelling setup fees as catalog items rather than as a number on the plan means 
 
 **`CPQ_Commit__c`** — one row per commit attempt. `Idempotency_Key__c` is a **unique External Id**, which is what makes R-17 real: uniqueness is enforced by the database, so two concurrent identical requests can't both win. Also holds `Correlation_Id__c`, `Acting_Rep__c`, `Opportunity__c`, `Status__c` and `Response_Snapshot__c` (the original response, replayed verbatim on a duplicate key).
 
+`Request_Hash__c` is a SHA-256 of the configuration being sold — plan, prices, add-ons, term — excluding the fields that legitimately differ between a request and its retry. Without it, "same key" and "same request" are indistinguishable, and the 409 in §6.3 for a key reused with a different payload can't be implemented: you'd have to either replay a result for a payload the caller never sent, or silently overwrite. Neither is safe.
+
 **`OpportunityLineItem`** — three custom fields: `CPQ_Catalog_Item__c` (durable link back to the catalog, so Closed Won never re-derives anything by name matching), `CPQ_Charge_Type__c`, and `CPQ_Commit__c`. That last one is how R-16 works: replacing a configuration deletes only lines stamped by a prior commit of this API, and leaves anything a human or another process added alone.
 
 **`Opportunity`** — `Contract_Effective_Date__c`, `Contract_Term_Months__c`, `Contract_End_Date__c` (formula).
@@ -209,6 +211,8 @@ The algorithm, in one pass and bulk-safe:
 6. Upsert one `Subscription__c` per Opportunity by external key, then insert its entitlements.
 
 Two SOQL queries and two DML statements regardless of batch size.
+
+One qualification, because it's the kind of claim that quietly stops being true. Regenerating over a subscription that already exists has to find the previous entitlements and supersede them, which costs one more query and one more DML. That path is entered only when the upsert reports the subscription already existed — so the two-and-two above holds for every normal close, and the extra pair is paid only when there is genuinely prior history to preserve.
 
 ---
 
@@ -277,7 +281,9 @@ Violation codes are a closed, documented set — `PLAN_BELOW_FLOOR`, `ADDON_BELO
 
 **Pattern:** a Connected App using the **OAuth 2.0 client credentials flow**, server-to-server, no user interaction, no refresh-token lifecycle for the platform to manage. It runs as a named integration user, `svc_revtech_cpq`, provisioned on a **Salesforce Integration license** — API-only, cannot log into the UI, and materially cheaper than a full seat. JWT bearer with a certificate is the alternative if RevTech prefers certificate rotation over secret rotation; both terminate at the same integration user, so the choice doesn't affect the design.
 
-That user gets exactly one permission set: the six custom objects and the fields this API touches, read on `Product2`/`PricebookEntry`, read/write on `Opportunity` and `OpportunityLineItem`, and Apex class access to the three endpoints. No "Modify All Data", no "View All".
+That user gets one permission set, `CPQ_Integration_User`: read on the catalog objects, create/read/edit on the three it actually writes (`CPQ_Commit__c`, `Subscription__c`, `Customer_Entitlement__c`), read on `Product2`/`PricebookEntry`, read/write on `Opportunity` and `OpportunityLineItem`, and Apex class access to the three endpoints. No "Modify All Data", no "View All".
+
+A second permission set, `CPQ_Catalog_Admin`, carries RevOps' write access to the catalog — plans, prices, floors, included features. Splitting them is the point: the principal that *sells* against the floor is not the principal that can *change* the floor, so a compromised integration credential cannot quietly reprice the catalog and then sell under it.
 
 **The rep is not the authenticated principal, and this matters.** Salesforce sees one integration user for every rep in the company. So the platform passes `actingRepEmail` in the request body; Salesforce resolves it to an active `User`, rejects it if it doesn't resolve, and stamps it on `CPQ_Commit__c` and on every log row.
 
@@ -305,6 +311,10 @@ To be explicit about what that identity is and isn't: **it is attribution, not a
 - **Errors never leak internals.** The caller gets a typed code, a safe message and the correlation ID. The stack trace goes to the log.
 - **Input is bounded.** Line counts, string lengths and numeric precision are validated before anything is queried, so a hostile payload can't burn governor limits on its way to being rejected.
 
+**One consequence worth stating, because it bit the build.** Fields deployed through the Metadata API carry no field-level security for any profile — including System Administrator. Combined with user-mode enforcement everywhere, that means a freshly deployed org is not merely restricted but inert: even an admin can't see `Active__c`, and the Apex won't compile against fields it has no access to. The permission sets are therefore part of the deployable artifact, not a post-install click path, and assigning one is a required step in the README rather than a footnote.
+
+That is the correct failure mode. A system whose security defaults to open is one bad deployment away from an unprotected floor; this one defaults to closed and makes you say who gets in.
+
 ### 7.2 Logging and monitoring
 
 `CPQ_Integration_Log__c` records, per call: correlation ID, endpoint, acting rep, integration user, target Opportunity, outcome, violation codes, duration and timestamp. Queryable by correlation ID, Opportunity, rep or date range, so support answers "what happened to this deal?" in one query.
@@ -323,7 +333,7 @@ A single `after update` trigger on Opportunity delegating to a handler class. It
 
 Idempotency is enforced twice over: by that transition check, and structurally by `Subscription__c.External_Key__c` being a unique External Id upserted on the Opportunity Id. The transition check handles the common case; the unique key is what holds if a future entry point bypasses the trigger.
 
-Bulk safety: queries and DML are outside all loops, two SOQL and two DML regardless of batch size, correct for a 200-record `Data Loader` stage update.
+Bulk safety: queries and DML are outside all loops, two SOQL and two DML regardless of batch size (with the one qualification in §5.1), correct for a 200-record `Data Loader` stage update. The test asserts the limit consumption directly rather than just the record counts, because a per-record query is the kind of regression that passes a correctness test and fails in production at row 201.
 
 **Failure handling.** Entitlements are created synchronously in the trigger, so the subscription, the entitlements and the won stage commit together or not at all — a deal cannot be won with half-built entitlements. On failure the handler calls `addError` on that specific Opportunity, which fails that record only and lets the other 199 in the batch succeed, and publishes a log event that survives the rollback. It does not swallow the exception.
 
@@ -372,6 +382,19 @@ Acceptance criteria are expressed as test methods rather than as a document sect
 | `closedWon_catalogPriceChangedAfterCommit_entitlementUnaffected` | R-3, R-21 |
 
 Coverage is evidence that the logic is tested, not a number to hit: the boundary cases (exactly at floor, one cent below), the negative paths and the 200-record bulk case are the ones that matter.
+
+**As built: 66 tests, all passing, 89% org-wide coverage.** The table above is the core set that maps to a rule; the remainder cover the REST layer's status codes and error envelopes, the logging that survives a rollback, and the failure paths — including the one where a single bad record in a batch of a hundred fails alone and the other ninety-nine still close.
+
+`scripts/demo.sh` runs the whole path over HTTP against a real org: catalog, a refusal at $425, a pass at exactly $450, a refused commit that writes nothing, an accepted commit, a retried commit that replays rather than double-writing, then Closed Won and the resulting entitlements. It is the fastest way to see the design behave without reading any of it.
+
+```bash
+sf org login web -a luxurycpq -s
+sf project deploy start -d force-app
+sf org assign permset -n CPQ_Integration_User -n CPQ_Catalog_Admin   # required, see §7.1
+sf apex run --file scripts/apex/seed-catalog.apex
+sf apex run test --test-level RunLocalTests --code-coverage
+./scripts/demo.sh luxurycpq
+```
 
 ---
 
