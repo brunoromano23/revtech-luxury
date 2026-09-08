@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Setup_Fee_Item__c</fullName>
+    <description>Plans only. Points at the Setup Fee item billed once alongside the plan.</description>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Setup Fee Item</label>
+    <referenceTo>CPQ_Catalog_Item__c</referenceTo>
+    <relationshipLabel>Plans Using This Setup Fee</relationshipLabel>
+    <relationshipName>Plans_Using_This_Setup_Fee</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

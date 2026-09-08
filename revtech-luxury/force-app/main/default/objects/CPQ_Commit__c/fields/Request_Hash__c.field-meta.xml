@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Request_Hash__c</fullName>
+    <description>SHA-256 of the committed configuration. Lets a repeated idempotency key carrying a different payload be rejected as a conflict rather than silently replayed (R-17).</description>
+    <label>Request Hash</label>
+    <length>64</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Durable, already-aggregated record of what a customer is entitled to. Named to avoid colliding with the standard Service Cloud Entitlement object, which is not used here.</description>
+    <enableActivities>false</enableActivities>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <label>Customer Entitlement</label>
+    <nameField>
+        <label>Entitlement</label>
+        <displayFormat>ENT-{000000}</displayFormat>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Customer Entitlements</pluralLabel>
+    <sharingModel>ControlledByParent</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

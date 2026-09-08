@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Contract_End_Date__c</fullName>
+    <description>Last day covered by the term: effective date + term months, minus one day.</description>
+    <formula>IF(
+  OR(ISBLANK(Contract_Effective_Date__c), ISBLANK(Contract_Term_Months__c)),
+  null,
+  ADDMONTHS(Contract_Effective_Date__c, Contract_Term_Months__c) - 1
+)</formula>
+    <formulaTreatBlanksAs>BlankAsBlank</formulaTreatBlanksAs>
+    <label>Contract End Date</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

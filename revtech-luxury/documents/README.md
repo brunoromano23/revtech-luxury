@@ -1,21 +1,18 @@
 # Documents
 
-Deliverable for the RevTech Senior Salesforce Developer case study — a custom CPQ
-solution on Salesforce for Luxury Presence.
+Solution design for the Luxury Presence RevTech case study — a custom CPQ on Salesforce.
 
-| # | Document | Markdown | PDF |
-|---|---|---|---|
-| 01 | Solution Design | [`01-solution-design.md`](01-solution-design.md) | [`01-solution-design.pdf`](01-solution-design.pdf) |
+| Document | File |
+|---|---|
+| **Solution Design** (submission copy) | [`Luxury Presence — Custom CPQ Solution Design.pdf`](Luxury%20Presence%20%E2%80%94%20Custom%20CPQ%20Solution%20Design.pdf) |
+| Markdown source | [`01-solution-design.md`](01-solution-design.md) |
 
-Markdown is the source of truth. The PDF is generated from it — edit the `.md`,
-then rebuild:
+The PDF is the version to read: it carries the entity-relationship diagram, the design-decision
+callouts and a table of contents. The Markdown holds the same content in a diff-friendly form.
+
+`tools/` contains a Markdown-to-PDF build (`marked` + headless Chrome, no pandoc or LaTeX) used for
+an earlier draft. It is kept because it renders the Mermaid ERD in `01-solution-design.md`:
 
 ```bash
 ./documents/tools/build-pdf.sh documents/01-solution-design.md
 ```
-
-The build uses `npx marked` for Markdown, [Mermaid](https://mermaid.js.org) for the
-ERD and headless Google Chrome to print, so it adds nothing to `package.json` and
-needs no pandoc/LaTeX toolchain. Print styling lives in
-[`tools/template-head.html`](tools/template-head.html); the Mermaid bootstrap in
-[`tools/template-foot.html`](tools/template-foot.html).

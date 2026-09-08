@@ -1,58 +1,108 @@
-# Salesforce DX Project
+# Custom CPQ on Salesforce — Luxury Presence RevTech
 
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
+A headless CPQ layer: Salesforce owns the catalog, enforces the price floors, and produces the
+durable entitlements that feature gating and billing consume. The rep-facing configurator lives on
+the React/NestJS platform and talks to this over REST. Nobody opens a Salesforce screen in this
+workflow.
 
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
+Case study submission for the Senior Salesforce Developer role.
+**Solution design: [`documents/`](documents/)** · **Apex: [`force-app/main/default/classes/`](force-app/main/default/classes/)**
 
-## Prerequisites
+---
 
-Before you start, make sure you have:
+## Get it running
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub.  See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+```bash
+sf org login web -a luxurycpq -s                     # any Developer Edition org
+sf project deploy start -d force-app
+sf org assign permset -n CPQ_Integration_User -n CPQ_Catalog_Admin
+sf apex run --file scripts/apex/seed-catalog.apex    # the catalog from the brief
+sf apex run test --test-level RunLocalTests --code-coverage
+./scripts/demo.sh luxurycpq                          # end to end over HTTP
+```
 
-## Project Structure
+The permission set assignment is not optional. Fields deployed through the Metadata API carry no
+field-level security for any profile, and every query and DML in this codebase runs in user mode —
+so without it, even a System Administrator sees nothing.
 
-Your DX project follows this structure:
+**Current state:** 66 tests, 100% passing, 89% org-wide coverage.
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+---
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+## The API
 
-## Get Started
+```
+GET  /services/apexrest/cpq/v1/catalog?effectiveDate=yyyy-mm-dd
+POST /services/apexrest/cpq/v1/configurations/validate
+POST /services/apexrest/cpq/v1/opportunities/{opportunityId}/commit
+```
 
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
+`validate` returns **200** even when it refuses — the question "is this sellable?" was answered
+successfully and the answer was no. `commit` returns **422** when it refuses, because there the
+caller asked us to write something and we declined. That asymmetry is deliberate and documented, so
+a client developer does not have to guess it twice.
 
-## Common Salesforce CLI Commands
+`scripts/demo.sh` walks the whole path with curl: catalog → refused at $425 → passes at exactly the
+$450 floor → refused commit writes nothing → accepted commit → retried commit replays instead of
+double-writing → Closed Won → entitlements → the log rows support would read.
 
-Here are common CLI commands that you'll use the most:
+---
 
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
+## What the code does
 
-## Use Agentforce Vibes to Build Lightning Apps
+| Class | Responsibility |
+|---|---|
+| `CpqCatalog` / `CpqCatalogService` | Loads the catalog once per request and resolves it against an effective date. Keeps inactive items, so a typo and a withdrawn product are different errors. |
+| `CpqValidator` | Every commercial rule. Pure — no SOQL, no DML — which is what lets `/validate` be called on every keystroke and lets `/commit` re-run the identical check. |
+| `CpqCommitService` | The transactional write: one savepoint, replaces only its own prior lines, idempotent by key. |
+| `CpqEntitlementService` | Closed Won aggregation. Two SOQL and two DML whether it runs for 1 record or 200. |
+| `OpportunityCpqHandler` | Fires on the transition into Closed Won only. Fails the individual record, not the batch. |
+| `CpqLogger` + `CpqLogEventTrigger` | Logs published as platform events, so a failed commit's log survives the rollback that erases everything else. |
+| `CpqCatalogSeed` | The reference catalog, defined once and shared by the tests and the seed script. |
 
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
+### Three decisions worth knowing before reading it
 
-## Additional Resources
+**`Product2` exists alongside a custom catalog because it has to.** `OpportunityLineItem` cannot be
+inserted without a `PricebookEntryId`. `CPQ_Catalog_Item__c` stays the source of truth for the CPQ
+rules — floors, included features, charge type, effective windows — none of which `Product2` can
+express.
 
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
+**Design Refresh grants nothing because its `Feature__c` is null.** It is billable and must never
+reach feature gating. There is no `if (code == 'ADDON_DESIGN_REFRESH')` anywhere in the codebase; the
+absence of a feature link is the whole mechanism, so the next non-entitling add-on needs no
+deployment. Likewise, whether a feature accumulates is `CPQ_Feature__c.Metering_Type__c`, not a
+branch — which is why Competitor Analysis resolves to enabled *once* when it arrives from both the
+plan and an add-on, while contacts add up to 1,000.
 
+**Idempotency is enforced by the database.** `Idempotency_Key__c` is a unique External Id. Querying
+for an existing key and then inserting would pass every test in this repo and still lose a race in
+production.
+
+---
+
+## Repository layout
+
+```
+documents/                     solution design (PDF + Markdown source)
+force-app/main/default/
+  classes/                     Apex: services, REST resources, tests
+  objects/                     7 custom objects, 1 platform event, 1 custom metadata type
+  permissionsets/              CPQ_Integration_User (least privilege), CPQ_Catalog_Admin (RevOps)
+  triggers/                    OpportunityTrigger, CpqLogEventTrigger
+scripts/
+  demo.sh                      end-to-end HTTP walkthrough
+  apex/seed-catalog.apex       loads the catalog from the brief
+```
+
+## Scope
+
+Built: the catalog, server-side floor enforcement, commit to Opportunity, Closed Won entitlement
+automation, and the logging that makes all of it supportable.
+
+Not built, by instruction: any UI, a live OAuth handshake, Opportunity creation, live callouts to
+billing or feature gating, approval routing for sub-floor pricing, and anything touching `Quote` /
+`QuoteLineItem` — contracts are generated in PandaDoc, so `OpportunityLineItem` is the source of
+truth for what is being sold.
+
+Add-on prices and floors are assumed values pending RevOps confirmation. They are catalog records,
+so changing them is an org edit rather than a deployment.

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Feature__c</fullName>
+    <description>Add-ons only, and deliberately nullable: Design Refresh grants nothing, which is why it produces no entitlement without any special-case code (R-19).</description>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Feature Granted</label>
+    <referenceTo>CPQ_Feature__c</referenceTo>
+    <relationshipLabel>Granting Add-Ons</relationshipLabel>
+    <relationshipName>Granting_Add_Ons</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

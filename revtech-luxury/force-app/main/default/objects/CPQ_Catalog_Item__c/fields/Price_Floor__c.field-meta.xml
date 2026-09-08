@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Price_Floor__c</fullName>
+    <description>Lowest sellable price. Enforced server-side (R-7, R-8). 0 means freely discountable.</description>
+    <label>Price Floor</label>
+    <precision>16</precision>
+    <required>true</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>

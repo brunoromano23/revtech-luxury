@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>External_Key__c</fullName>
+    <description>Set to the Opportunity Id. Makes the Closed Won automation idempotent under upsert (R-20).</description>
+    <externalId>true</externalId>
+    <label>External Key</label>
+    <length>32</length>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

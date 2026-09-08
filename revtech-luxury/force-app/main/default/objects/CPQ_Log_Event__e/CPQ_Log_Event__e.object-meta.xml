@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Log envelope published with PublishImmediately so it commits independently of the transaction it describes (design doc S7.2).</description>
+    <eventType>HighVolume</eventType>
+    <label>CPQ Log Event</label>
+    <pluralLabel>CPQ Log Events</pluralLabel>
+    <publishBehavior>PublishImmediately</publishBehavior>
+</CustomObject>
