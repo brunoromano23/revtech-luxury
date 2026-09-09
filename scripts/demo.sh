@@ -10,8 +10,9 @@
 # overlap case — a plan that already includes a feature the rep adds again — because that is where
 # binary and metered features visibly diverge.
 #
-# --stage-live holds back the Closed Won on the first deal and prints its URL instead, so the stage
-# change can be made in the UI while recording. The overlap case still runs to completion.
+# --stage-live holds back the Closed Won on the first deal, parks it at the last open stage and
+# prints its URL instead, so the stage change can be made in the UI while recording. The overlap
+# case still runs to completion.
 #
 set -euo pipefail
 
@@ -190,7 +191,14 @@ note "Line items still on the deal: $(sf data query -o "$ORG" -q "SELECT COUNT()
 
 # --------------------------------------------------------- 8. Closed Won → entitlements
 if [ "$STAGE_LIVE" = true ]; then
+  # The last open stage in this org's sales process, whatever it is called there, so the deal is
+  # parked one move away from the close instead of sitting back at Prospecting.
+  STAGE=$(sf data query -o "$ORG" --json \
+    -q "SELECT MasterLabel FROM OpportunityStage WHERE IsActive = true AND IsClosed = false ORDER BY SortOrder DESC LIMIT 1" \
+    | jq -r '.result.records[0].MasterLabel')
   bold "8. Closed Won — held back so the stage change can be made on camera"
+  sf data update record -o "$ORG" -s Opportunity -i "$OPP_ID" -v "StageName='$STAGE'" --json >/dev/null
+  note "   Parked at $STAGE — the last open stage, so the only move left on camera is the close."
   note "   $INSTANCE/lightning/r/Opportunity/$OPP_ID/view"
   note "   Move it to Closed Won in the UI; the entitlements build behind that save."
 else
@@ -240,7 +248,7 @@ sf data query -o "$ORG" --json -q "SELECT LoggingLevel__c, EntryScenario__r.Name
 
 bold "Done."
 if [ "$STAGE_LIVE" = true ]; then
-  echo "   Brand deal  — staged at Prospecting, close it on camera:"
+  echo "   Brand deal  — staged at $STAGE, close it on camera:"
 else
   echo "   Brand deal  — won:"
 fi

@@ -54,8 +54,9 @@ overlap case on a second deal — All In, which already includes Competitor Anal
 adding Competitor Analysis again and Contacts ×3 — where the binary feature resolves to enabled
 once and the metered one accumulates to 2,500.
 
-`--stage-live` holds back the Closed Won on the first deal and prints its URL instead, so the stage
-change can be made in the UI rather than by the script.
+`--stage-live` holds back the Closed Won on the first deal, parks it at the last open stage in the
+org's sales process and prints its URL instead, so the stage change can be made in the UI rather
+than by the script.
 
 ---
 
