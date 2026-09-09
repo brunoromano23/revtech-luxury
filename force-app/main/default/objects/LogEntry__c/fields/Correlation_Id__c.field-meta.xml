@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Correlation_Id__c</fullName>
+    <description>The correlation ID shared with the React/NestJS platform, so one identifier spans both systems' logs. Nebula's own TransactionId__c identifies a Salesforce transaction; it cannot identify the caller's request. Nebula copies same-named custom fields from LogEntryEvent__e onto LogEntry__c automatically, which is why the two carry the same API name. External Id so support can query by it.</description>
+    <externalId>true</externalId>
+    <label>Correlation Id</label>
+    <length>64</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

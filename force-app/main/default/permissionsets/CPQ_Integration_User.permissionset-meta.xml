@@ -3,6 +3,30 @@
     <description>Least-privilege access for the svc_revtech_cpq integration principal that the React/NestJS platform authenticates as. Read on the catalog, write on what a commit and its Closed Won automation produce. No Modify All Data, no View All.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>CPQ Integration User</label>
+    <!--
+      Without these two the principal authenticates successfully and then gets
+      403 APEX_REST_SERVICES_DISABLED on every endpoint. Neither is implied by object access, and
+      no Apex test can catch their absence: RestContext tests never cross the HTTP boundary where
+      the permission is checked. Found by calling the API as this user over the wire.
+    -->
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ApiEnabled</name>
+    </userPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ApexRestServices</name>
+    </userPermissions>
+    <!--
+      Without this, inserting an OpportunityLineItem below its PricebookEntry list price fails with
+      "User may not specify unit price different from list price". A CPQ whose entire purpose is
+      negotiated pricing under a floor cannot function without it: every discounted line is, by
+      definition, a sales price that differs from list.
+    -->
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>EditOppLineItemUnitPrice</name>
+    </userPermissions>
     <objectPermissions>
         <allowCreate>false</allowCreate>
         <allowDelete>false</allowDelete>
@@ -60,15 +84,6 @@
     <objectPermissions>
         <allowCreate>false</allowCreate>
         <allowDelete>false</allowDelete>
-        <allowEdit>false</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>false</modifyAllRecords>
-        <object>CPQ_Integration_Log__c</object>
-        <viewAllRecords>false</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>false</allowCreate>
-        <allowDelete>false</allowDelete>
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
@@ -93,6 +108,21 @@
         <object>Product2</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
+    <!--
+      Account is never queried by this code, but Opportunity.AccountId is a lookup to it, and a
+      lookup to an object the running user cannot read is not merely empty - the field does not
+      exist as far as SOQL is concerned. Commit rejects an Opportunity without an Account (A-4),
+      so without this the rule it enforces is one it can never actually see.
+    -->
+    <objectPermissions>
+        <allowCreate>false</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>false</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>Account</object>
+        <viewAllRecords>false</viewAllRecords>
+    </objectPermissions>
     <objectPermissions>
         <allowCreate>false</allowCreate>
         <allowDelete>false</allowDelete>
@@ -111,6 +141,23 @@
         <object>PricebookEntry</object>
         <viewAllRecords>false</viewAllRecords>
     </objectPermissions>
+    <!--
+      The one field added to Nebula's objects. Deployed through the Metadata API it carries no FLS
+      for anyone, so without these two entries the field exists and SOQL still reports
+      "No such column 'Correlation_Id__c'" - the same failure mode S7.1 describes, now on a
+      packaged object. Editable on the event because the logger writes it; readable on the entry
+      because support queries by it.
+    -->
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>LogEntryEvent__e.Correlation_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>LogEntry__c.Correlation_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
         <field>CPQ_Catalog_Item__c.Active__c</field>
@@ -266,54 +313,22 @@
         <field>Customer_Entitlement__c.Status__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <!--
+      Standard fields the services read. Custom-field FLS alone is not enough: this permission set
+      granted only the fields this project created, so a least-privilege principal could read an
+      Opportunity's Id and nothing else, and SOQL reported "No such column 'AccountId'" rather than
+      a permission error. Fields that are not FLS-controlled at all (StageName, IsClosed, Quantity,
+      UnitPrice, OpportunityId, PricebookEntryId) are deliberately absent — they follow object
+      access and cannot be listed here.
+    -->
     <fieldPermissions>
         <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Acting_Rep__c</field>
+        <field>Opportunity.AccountId</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Correlation_Id__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Duration_Ms__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Endpoint__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Integration_User__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Logged_At__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Message__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Opportunity_Id__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Stack_Trace__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>CPQ_Integration_Log__c.Violation_Codes__c</field>
+        <editable>true</editable>
+        <field>OpportunityLineItem.TotalPrice</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

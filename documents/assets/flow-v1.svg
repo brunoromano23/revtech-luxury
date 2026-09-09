@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" font-family="TeX Gyre Heros, Helvetica, sans-serif">
+  <defs>
+    <style>
+      .bx    { fill:#FFFFFF; stroke:#14120F; stroke-width:1.1; }
+      .bx-std{ fill:#F1EDE4; stroke:#8A8279; stroke-width:1; }
+      .cap   { fill:#8C7853; }
+      .ttl   { font-size:11.5px; font-weight:bold; fill:#14120F; }
+      .ttl-s { font-size:11.5px; font-weight:bold; fill:#57514A; }
+      .fld   { font-family:'DejaVu Sans Mono',monospace; font-size:8.8px; fill:#78716A; }
+      .fldk  { font-family:'DejaVu Sans Mono',monospace; font-size:8.8px; fill:#5E4E37; }
+      .lane  { font-size:9.5px; font-weight:bold; fill:#B5AC9E; letter-spacing:2.2px; }
+      .flow  { stroke:#14120F; stroke-width:1.3; fill:none; }
+      .head  { fill:#14120F; }
+      .bound { stroke:#8C7853; stroke-width:1.1; stroke-dasharray:5 4; fill:none; }
+      .blbl  { font-size:8.6px; font-weight:bold; fill:#8C7853; letter-spacing:.6px; }
+      .rlbl  { font-size:8.6px; fill:#78716A; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="900" height="430" fill="#FCFBF8"/>
+
+  <line x1="0" y1="212" x2="900" y2="212" stroke="#E8E3D9" stroke-width="1"/>
+  <text class="lane" x="2" y="16">PATH A — HTTP REQUEST</text>
+  <text class="lane" x="2" y="240">PATH B — CLOSED WON</text>
+
+  <!-- ================= PATH A ================= -->
+  <rect class="bx-std" x="6" y="34" width="158" height="98"/>
+  <text class="ttl-s" x="18" y="56">Client</text>
+  <text class="fld"   x="18" y="76">React · NestJS</text>
+  <text class="fld"   x="18" y="92">holds its own</text>
+  <text class="fld"   x="18" y="106">credentials</text>
+  <text class="fld"   x="18" y="122">sends actingRepEmail</text>
+
+  <rect class="bx" x="188" y="34" width="158" height="98"/>
+  <rect class="cap" x="188" y="34" width="158" height="3"/>
+  <text class="ttl"  x="200" y="58">CpqRestResource</text>
+  <text class="fldk" x="200" y="78">with sharing</text>
+  <text class="fldk" x="200" y="94">WITH USER_MODE</text>
+  <text class="fld"  x="200" y="112">typed errors ·</text>
+  <text class="fld"  x="200" y="126">no stack traces out</text>
+
+  <rect class="bx" x="370" y="34" width="158" height="98"/>
+  <rect class="cap" x="370" y="34" width="158" height="3"/>
+  <text class="ttl"  x="382" y="58">CpqValidator</text>
+  <text class="fldk" x="382" y="78">pure</text>
+  <text class="fld"  x="382" y="94">no SOQL · no DML</text>
+  <text class="fld"  x="382" y="112">every violation,</text>
+  <text class="fld"  x="382" y="126">one response</text>
+
+  <rect class="bx" x="552" y="34" width="158" height="98"/>
+  <rect class="cap" x="552" y="34" width="158" height="3"/>
+  <text class="ttl"  x="564" y="58">CpqCommitService</text>
+  <text class="fldk" x="564" y="78">savepoint</text>
+  <text class="fld"  x="564" y="94">re-validates first</text>
+  <text class="fld"  x="564" y="112">rollback on refusal</text>
+  <text class="fld"  x="564" y="126">idempotent by key</text>
+
+  <rect class="bx" x="734" y="34" width="158" height="98"/>
+  <rect class="cap" x="734" y="34" width="158" height="3"/>
+  <text class="ttl"  x="746" y="58">CpqLogger</text>
+  <text class="fld"  x="746" y="78">→ Nebula event bus</text>
+  <text class="fldk" x="746" y="96">commits</text>
+  <text class="fldk" x="746" y="110">independently</text>
+  <text class="fld"  x="746" y="126">outlives the rollback</text>
+
+  <!-- trust boundary -->
+  <line class="bound" x1="176" y1="20" x2="176" y2="196"/>
+  <text class="blbl" x="182" y="186">TRUST BOUNDARY — nothing beyond this point is trusted</text>
+
+  <!-- flow arrows, path A -->
+  <line class="flow" x1="164" y1="83" x2="182" y2="83"/>
+  <path class="head" d="M188 83 l-8 -4 v8 z"/>
+  <line class="flow" x1="346" y1="83" x2="364" y2="83"/>
+  <path class="head" d="M370 83 l-8 -4 v8 z"/>
+  <line class="flow" x1="528" y1="83" x2="546" y2="83"/>
+  <path class="head" d="M552 83 l-8 -4 v8 z"/>
+  <line class="flow" x1="710" y1="83" x2="728" y2="83"/>
+  <path class="head" d="M734 83 l-8 -4 v8 z"/>
+
+  <text class="rlbl" x="374" y="152">commit re-runs the identical check — a prior validate is never trusted</text>
+  <path class="flow" d="M600 132 v22 H452 v-18"/>
+  <path class="head" d="M452 130 l-4 8 h8 z"/>
+
+  <!-- ================= PATH B ================= -->
+  <rect class="bx-std" x="6" y="262" width="158" height="98"/>
+  <text class="ttl-s" x="18" y="284">Opportunity</text>
+  <text class="fld"   x="18" y="304">after update</text>
+  <text class="fld"   x="18" y="322">one trigger,</text>
+  <text class="fld"   x="18" y="336">no logic in it</text>
+
+  <rect class="bx" x="188" y="262" width="158" height="98"/>
+  <rect class="cap" x="188" y="262" width="158" height="3"/>
+  <text class="ttl"  x="200" y="286">Trigger Actions</text>
+  <text class="ttl"  x="200" y="300">Framework</text>
+  <text class="fldk" x="200" y="320">Trigger_Action__mdt</text>
+  <text class="fld"  x="200" y="336">order · bypass</text>
+  <text class="fld"  x="200" y="350">are configuration</text>
+
+  <rect class="bx" x="370" y="262" width="158" height="98"/>
+  <rect class="cap" x="370" y="262" width="158" height="3"/>
+  <text class="ttl"  x="382" y="286">OpportunityCpq</text>
+  <text class="ttl"  x="382" y="300">EntitlementAction</text>
+  <text class="fld"  x="382" y="320">adapter only —</text>
+  <text class="fld"  x="382" y="334">translates the</text>
+  <text class="fld"  x="382" y="348">call shape</text>
+
+  <rect class="bx" x="552" y="262" width="158" height="98"/>
+  <rect class="cap" x="552" y="262" width="158" height="3"/>
+  <text class="ttl"  x="564" y="286">OpportunityCpq</text>
+  <text class="ttl"  x="564" y="300">Handler</text>
+  <text class="fldk" x="564" y="320">transition into</text>
+  <text class="fldk" x="564" y="334">Closed Won only</text>
+  <text class="fld"  x="564" y="350">addError per record</text>
+
+  <rect class="bx" x="734" y="262" width="158" height="98"/>
+  <rect class="cap" x="734" y="262" width="158" height="3"/>
+  <text class="ttl"  x="746" y="286">Subscription +</text>
+  <text class="ttl"  x="746" y="300">Entitlements</text>
+  <text class="fldk" x="746" y="320">upsert by ext key</text>
+  <text class="fld"  x="746" y="336">2 SOQL · 2 DML</text>
+  <text class="fld"  x="746" y="350">at any batch size</text>
+
+  <line class="flow" x1="164" y1="311" x2="182" y2="311"/>
+  <path class="head" d="M188 311 l-8 -4 v8 z"/>
+  <line class="flow" x1="346" y1="311" x2="364" y2="311"/>
+  <path class="head" d="M370 311 l-8 -4 v8 z"/>
+  <line class="flow" x1="528" y1="311" x2="546" y2="311"/>
+  <path class="head" d="M546 311 l-8 -4 v8 z"/>
+  <path class="head" d="M552 311 l-8 -4 v8 z"/>
+  <line class="flow" x1="710" y1="311" x2="728" y2="311"/>
+  <path class="head" d="M734 311 l-8 -4 v8 z"/>
+
+  <text class="rlbl" x="200" y="378">routing is metadata</text>
+  <text class="rlbl" x="564" y="378">the rules stay in plain Apex the tests call directly</text>
+
+  <!-- both paths log -->
+  <path class="bound" d="M813 360 v28 H452 v-28"/>
+  <text class="rlbl" x="458" y="402">both paths log through the same adapter</text>
+</svg>

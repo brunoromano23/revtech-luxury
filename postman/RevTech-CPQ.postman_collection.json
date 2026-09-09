@@ -1,0 +1,348 @@
+{
+  "info": {
+    "name": "RevTech CPQ — Salesforce REST",
+    "description": "The three endpoints as the React/NestJS platform calls them, authenticated as the integration user through the client credentials flow.\n\nRun the folders in order, or use the Collection Runner — later requests depend on variables the earlier ones set (accessToken, opportunityId, idempotencyKey).\n\nEvery request asserts its own status code and payload shape, so a run is a pass/fail suite rather than a set of URLs to eyeball.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "loginUrl", "value": "https://orgfarm-6ea4f58930-dev-ed.develop.my.salesforce.com", "type": "string" },
+    { "key": "instanceUrl", "value": "", "type": "string" },
+    { "key": "clientId", "value": "", "type": "string" },
+    { "key": "clientSecret", "value": "", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "actingRepEmail", "value": "svc.revtech.cpq@revtech.luxury.demo", "type": "string" },
+    { "key": "opportunityId", "value": "", "type": "string" },
+    { "key": "idempotencyKey", "value": "", "type": "string" },
+    { "key": "api", "value": "{{instanceUrl}}/services/apexrest/cpq/v1", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 · Auth",
+      "item": [
+        {
+          "name": "Get token (client credentials)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — the Connected App issued a token', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('carries an access_token', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('accessToken', body.access_token);",
+                  "pm.collectionVariables.set('instanceUrl', body.instance_url);",
+                  "console.log('Running as the Connected App Run As user. instance:', body.instance_url);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "client_credentials" },
+                { "key": "client_id", "value": "{{clientId}}" },
+                { "key": "client_secret", "value": "{{clientSecret}}" }
+              ]
+            },
+            "url": { "raw": "{{loginUrl}}/services/oauth2/token", "host": ["{{loginUrl}}"], "path": ["services", "oauth2", "token"] },
+            "description": "No user interaction, no refresh token. The token belongs to the Connected App's Run As user — svc.revtech.cpq — so everything after this runs under CPQ_Integration_User's permissions and nothing more."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 · Catalog",
+      "item": [
+        {
+          "name": "GET /catalog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('three plans and three add-ons', () => {",
+                  "  pm.expect(b.plans).to.have.lengthOf(3);",
+                  "  pm.expect(b.addOns).to.have.lengthOf(3);",
+                  "});",
+                  "pm.test('wire contract is intact — field names the client binds to', () => {",
+                  "  pm.expect(b).to.have.property('catalogVersion');",
+                  "  pm.expect(b).to.have.property('permittedContractTerms');",
+                  "  pm.expect(b.plans[0]).to.have.property('code');",
+                  "  pm.expect(b.plans[0]).to.have.property('priceFloor');",
+                  "});",
+                  "const brand = b.plans.find(p => p.code === 'PLAN_BRAND');",
+                  "pm.test('Brand floor is 450', () => pm.expect(Number(brand.priceFloor)).to.eql(450));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{api}}/catalog", "host": ["{{api}}"], "path": ["catalog"] },
+            "description": "Proves the integration user can read the catalog under user-mode enforcement. A 403 here means CPQ_Integration_User is missing an object or field."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 · Validate",
+      "item": [
+        {
+          "name": "Sub-floor — 200 with valid:false",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — refusing is a successful answer', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('valid is false', () => pm.expect(b.valid).to.eql(false));",
+                  "pm.test('every violation returned in one response, not just the first', () => {",
+                  "  const codes = b.violations.map(v => v.code);",
+                  "  pm.expect(codes).to.include('PLAN_BELOW_FLOOR');",
+                  "  pm.expect(codes).to.include('ADDON_BELOW_FLOOR');",
+                  "});",
+                  "pm.test('violations are machine-readable for the client to render', () => {",
+                  "  pm.expect(b.violations[0]).to.have.property('line');",
+                  "  pm.expect(b.violations[0]).to.have.property('submitted');",
+                  "  pm.expect(b.violations[0]).to.have.property('permitted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 425.00,\n  \"addOns\": [{ \"code\": \"ADDON_CONTACTS_500\", \"quantity\": 1, \"unitPrice\": 70.00 }],\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/configurations/validate", "host": ["{{api}}"], "path": ["configurations", "validate"] }
+          }
+        },
+        {
+          "name": "Exactly at floor — passes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('the floor is inclusive — exactly at floor passes', () => pm.expect(b.valid).to.eql(true));",
+                  "pm.test('totals are computed server-side', () => {",
+                  "  pm.expect(b.totals).to.have.property('monthlyRecurring');",
+                  "  pm.expect(b.totals).to.have.property('totalContractValue');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 450.00,\n  \"setupFee\": 1000.00,\n  \"addOns\": [{ \"code\": \"ADDON_CONTACTS_500\", \"quantity\": 1, \"unitPrice\": 100.00 }],\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/configurations/validate", "host": ["{{api}}"], "path": ["configurations", "validate"] }
+          }
+        },
+        {
+          "name": "Malformed JSON — 400, not an Apex stack trace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('no Apex internals leak to the caller', () => {",
+                  "  pm.expect(pm.response.text()).to.not.include('System.');",
+                  "  pm.expect(pm.response.text()).to.not.include('Class.Cpq');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ this is not json" },
+            "url": { "raw": "{{api}}/configurations/validate", "host": ["{{api}}"], "path": ["configurations", "validate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 · Commit",
+      "item": [
+        {
+          "name": "Sub-floor commit, skipping validate — 422",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('idempotencyKey', 'postman-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 — commit refuses to write', () => pm.response.to.have.status(422));",
+                  "const b = pm.response.json();",
+                  "pm.test('re-validated server-side; a prior validate is never trusted', () => {",
+                  "  pm.expect(b.violations.map(v => v.code)).to.include('PLAN_BELOW_FLOOR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 400.00,\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/opportunities/{{opportunityId}}/commit", "host": ["{{api}}"], "path": ["opportunities", "{{opportunityId}}", "commit"] },
+            "description": "Set opportunityId first. This is the call that matters most: it is how a script or a broken client would call the API, and the floor still holds."
+          }
+        },
+        {
+          "name": "Valid commit — 200",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.collectionVariables.set('idempotencyKey', 'postman-commit-' + Date.now());"]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('four lines: plan, setup fee, two add-ons', () => pm.expect(b.lineItemIds).to.have.lengthOf(4));",
+                  "pm.test('not a replay the first time', () => pm.expect(b.replayed).to.eql(false));",
+                  "pm.collectionVariables.set('idempotencyKey', pm.request.body.raw.match(/\"idempotencyKey\": \"([^\"]+)\"/) ? pm.collectionVariables.get('idempotencyKey') : '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 450.00,\n  \"setupFee\": 1000.00,\n  \"addOns\": [\n    { \"code\": \"ADDON_CONTACTS_500\",   \"quantity\": 1, \"unitPrice\": 100.00 },\n    { \"code\": \"ADDON_DESIGN_REFRESH\", \"quantity\": 1, \"unitPrice\": 750.00 }\n  ],\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/opportunities/{{opportunityId}}/commit", "host": ["{{api}}"], "path": ["opportunities", "{{opportunityId}}", "commit"] }
+          }
+        },
+        {
+          "name": "Same key again — replays, does not double-write",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('replayed — the database key won, not a query-then-insert', () => pm.expect(b.replayed).to.eql(true));",
+                  "pm.test('still four lines', () => pm.expect(b.lineItemIds).to.have.lengthOf(4));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 450.00,\n  \"setupFee\": 1000.00,\n  \"addOns\": [\n    { \"code\": \"ADDON_CONTACTS_500\",   \"quantity\": 1, \"unitPrice\": 100.00 },\n    { \"code\": \"ADDON_DESIGN_REFRESH\", \"quantity\": 1, \"unitPrice\": 750.00 }\n  ],\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/opportunities/{{opportunityId}}/commit", "host": ["{{api}}"], "path": ["opportunities", "{{opportunityId}}", "commit"] },
+            "description": "Run immediately after the previous request, unchanged. Same key, same payload."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 · Negative paths",
+      "item": [
+        {
+          "name": "Malformed Opportunity Id — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400, not an unhandled StringException', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"idempotencyKey\": \"postman-bad-id\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 450.00,\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/opportunities/not-an-id/commit", "host": ["{{api}}"], "path": ["opportunities", "not-an-id", "commit"] }
+          }
+        },
+        {
+          "name": "Unknown Opportunity — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 — indistinguishable from not-permitted, so it is not an Id oracle', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actingRepEmail\": \"{{actingRepEmail}}\",\n  \"idempotencyKey\": \"postman-unknown\",\n  \"planCode\": \"PLAN_BRAND\",\n  \"planPrice\": 450.00,\n  \"contractEffectiveDate\": \"2026-09-07\",\n  \"contractTermMonths\": 12\n}"
+            },
+            "url": { "raw": "{{api}}/opportunities/006000000000000AAA/commit", "host": ["{{api}}"], "path": ["opportunities", "006000000000000AAA", "commit"] }
+          }
+        }
+      ]
+    }
+  ]
+}

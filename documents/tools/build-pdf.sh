@@ -2,41 +2,39 @@
 #
 # Renders a Markdown document in documents/ to a print-styled PDF.
 #
-#   ./documents/tools/build-pdf.sh documents/01-business-requirements.md
+#   ./documents/tools/build-pdf.sh documents/01-solution-design.md [output.pdf]
 #
-# Requires: node/npx (marked) and Google Chrome. Both are already present on a
-# standard Salesforce dev machine, which is why this uses them instead of adding
-# a pandoc/LaTeX toolchain to the project.
+# Requires: node/npx (marked), and Python with weasyprint + beautifulsoup4:
+#
+#   brew install pango gdk-pixbuf libffi
+#   pip3 install weasyprint beautifulsoup4
+#
+# WeasyPrint rather than headless Chrome. Chrome applies a single page size to the whole document,
+# so the landscape page the ERD needs is impossible there; WeasyPrint supports named pages with
+# their own size, resolves target-counter for the contents page, and runs no JavaScript — which is
+# why every structural transform lives in assemble.py rather than in a browser.
 #
 set -euo pipefail
 
-SRC="${1:?usage: build-pdf.sh <path/to/doc.md>}"
+SRC="${1:?usage: build-pdf.sh <path/to/doc.md> [output.pdf]}"
 [ -f "$SRC" ] || { echo "not found: $SRC" >&2; exit 1; }
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUT="${SRC%.md}.pdf"
+SRC_DIR="$(cd "$(dirname "$SRC")" && pwd)"
+# The deliverable is named for a reader, not for its source file, so the output path is
+# overridable. Defaults to the source name for quick local rebuilds.
+OUT="${2:-${SRC%.md}.pdf}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
-
-CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-[ -x "$CHROME" ] || CHROME="$(command -v google-chrome || command -v chromium || true)"
-[ -n "$CHROME" ] || { echo "Google Chrome not found" >&2; exit 1; }
 
 echo "› rendering markdown"
 npx --yes marked --gfm -i "$SRC" -o "$WORK/body.html"
 
-echo "› assembling html"
-cat "$HERE/template-head.html" "$WORK/body.html" "$HERE/template-foot.html" > "$WORK/doc.html"
+echo "› assembling document"
+python3 "$HERE/assemble.py" "$WORK/body.html" "$SRC_DIR" "$WORK/doc.html" "$HERE/template-head.html"
 
-# Mermaid renders the ERD client-side, so Chrome needs time on the clock for the
-# CDN fetch plus layout before the page is printed.
 echo "› printing pdf"
-"$CHROME" --headless=new --disable-gpu --no-sandbox \
-  --no-pdf-header-footer \
-  --virtual-time-budget=30000 \
-  --run-all-compositor-stages-before-draw \
-  --print-to-pdf="$WORK/out.pdf" \
-  "file://$WORK/doc.html" 2>/dev/null
+python3 -m weasyprint "$WORK/doc.html" "$WORK/out.pdf" --base-url "$SRC_DIR/"
 
 mv "$WORK/out.pdf" "$OUT"
 echo "✓ $OUT"

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nebula does not copy subscriber-added custom fields from the event to the log entry on its own -
+  the mapping is explicit, which is the safer default for a packaged object. Without this record
+  Correlation_Id__c is populated on LogEntryEvent__e, the entry is written, and the column on
+  LogEntry__c is silently null: logging appears to work and the one field that joins our logs to
+  the platform's is missing.
+-->
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <label>CPQ Correlation Id</label>
+    <protected>false</protected>
+    <values>
+        <field>SourceSObjectType__c</field>
+        <value xsi:type="xsd:string">LogEntryEvent__e</value>
+    </values>
+    <values>
+        <field>SourceField__c</field>
+        <value xsi:type="xsd:string">Correlation_Id__c</value>
+    </values>
+    <values>
+        <field>TargetSObjectType__c</field>
+        <value xsi:type="xsd:string">LogEntry__c</value>
+    </values>
+    <values>
+        <field>TargetField__c</field>
+        <value xsi:type="xsd:string">Correlation_Id__c</value>
+    </values>
+    <values>
+        <field>IsEnabled__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

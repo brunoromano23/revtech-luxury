@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 590" width="1180" height="590" font-family="TeX Gyre Heros, Helvetica, sans-serif">
+  <defs>
+    <style>
+      .bx    { fill:#FFFFFF; stroke:#14120F; stroke-width:1.1; }
+      .bx-std{ fill:#F1EDE4; stroke:#8A8279; stroke-width:1; }
+      .bx-dt { fill:#FFFFFF; stroke:#8A8279; stroke-width:1; stroke-dasharray:4 3; }
+      .cap   { fill:#8C7853; }
+      .ttl   { font-size:13px; font-weight:bold; fill:#14120F; }
+      .ttl-s { font-size:13px; font-weight:bold; fill:#57514A; }
+      .fld   { font-family:'DejaVu Sans Mono',monospace; font-size:9.6px; fill:#78716A; }
+      .fldk  { font-family:'DejaVu Sans Mono',monospace; font-size:9.6px; fill:#5E4E37; }
+      .lane  { font-size:9.5px; font-weight:bold; fill:#B5AC9E; letter-spacing:2.2px; }
+      .rel   { stroke:#14120F; stroke-width:1.2; fill:none; }
+      .rel-l { stroke:#8A8279; stroke-width:.85; fill:none; }
+      .rlbl  { font-size:8.8px; fill:#78716A; }
+      .crow  { stroke:#14120F; stroke-width:1.2; fill:none; }
+      .crow-l{ stroke:#8A8279; stroke-width:.85; fill:none; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1180" height="590" fill="#FCFBF8"/>
+
+  <line x1="0" y1="190" x2="1180" y2="190" stroke="#E8E3D9" stroke-width="1"/>
+  <line x1="0" y1="380" x2="1180" y2="380" stroke="#E8E3D9" stroke-width="1"/>
+  <text class="lane" x="2" y="18">CATALOG</text>
+  <text class="lane" x="2" y="208">TRANSACTION</text>
+  <text class="lane" x="2" y="398">ENTITLEMENT</text>
+
+  <!-- ROW 1 -->
+  <rect class="bx" x="20" y="42" width="212" height="100"/>
+  <rect class="cap" x="20" y="42" width="212" height="3"/>
+  <text class="ttl" x="34" y="64">CPQ_Feature__c</text>
+  <text class="fldk" x="34" y="84">Code__c  (Ext Id, uniq)</text>
+  <text class="fldk" x="34" y="100">Metering_Type__c</text>
+  <text class="fld"  x="34" y="116">  Binary | Metered</text>
+  <text class="fld"  x="34" y="132">Active__c</text>
+
+  <rect class="bx" x="300" y="42" width="212" height="100"/>
+  <rect class="cap" x="300" y="42" width="212" height="3"/>
+  <text class="ttl" x="314" y="64">CPQ_Plan_Feature__c</text>
+  <text class="fld" x="314" y="84">Plan__c      (M-D)</text>
+  <text class="fld" x="314" y="100">Feature__c   (lookup)</text>
+  <text class="fldk" x="314" y="116">Quantity__c</text>
+  <text class="fld" x="314" y="132">  500 | 1,000 | null</text>
+
+  <rect class="bx" x="580" y="24" width="230" height="138"/>
+  <rect class="cap" x="580" y="24" width="230" height="3"/>
+  <text class="ttl" x="594" y="46">CPQ_Catalog_Item__c</text>
+  <text class="fldk" x="594" y="66">Code__c  (Ext Id, uniq)</text>
+  <text class="fldk" x="594" y="82">Item_Type__c</text>
+  <text class="fld"  x="594" y="98">  Plan | Add-On | Setup Fee</text>
+  <text class="fld"  x="594" y="114">List_Price__c · Price_Floor__c</text>
+  <text class="fld"  x="594" y="130">Charge_Type__c · Feature__c</text>
+  <text class="fld"  x="594" y="146">Setup_Fee_Item__c (self)</text>
+  <text class="fld"  x="594" y="158">Active__c · Effective dates</text>
+
+  <path class="rel-l" d="M810 42 h26 v-24 h-92"/>
+  <path class="crow-l" d="M744 18 l10 -5 M744 18 l10 5"/>
+  <text class="rlbl" x="754" y="14">setup-fee item</text>
+
+  <rect class="bx-std" x="880" y="42" width="176" height="42"/>
+  <text class="ttl-s" x="894" y="68">Product2</text>
+  <rect class="bx-std" x="880" y="120" width="176" height="42"/>
+  <text class="ttl-s" x="894" y="146">PricebookEntry</text>
+
+  <line class="rel-l" x1="232" y1="92" x2="300" y2="92"/>
+  <path class="crow-l" d="M288 92 l12 -6 M288 92 l12 6 M288 86 v12"/>
+  <text class="rlbl" x="238" y="86">granted by</text>
+
+  <line class="rel" x1="580" y1="92" x2="512" y2="92"/>
+  <path class="crow" d="M524 92 l-12 -6 M524 92 l-12 6 M524 86 v12"/>
+  <text class="rlbl" x="526" y="86">includes</text>
+
+  <path class="rel-l" d="M600 24 v-12 H126 v30"/>
+  <path class="crow-l" d="M126 36 l-5 -10 M126 36 l5 -10"/>
+  <text class="rlbl" x="290" y="8">add-on grants 0..1 feature</text>
+
+  <line class="rel-l" x1="810" y1="63" x2="880" y2="63"/>
+  <path class="crow-l" d="M822 63 l-12 -6 M822 63 l-12 6 M822 57 v12"/>
+  <text class="rlbl" x="820" y="57">sold as</text>
+
+  <line class="rel-l" x1="968" y1="84" x2="968" y2="120"/>
+  <path class="crow-l" d="M968 108 l-6 12 M968 108 l6 12 M962 108 h12"/>
+
+  <!-- ROW 2 -->
+  <rect class="bx-std" x="300" y="230" width="212" height="84"/>
+  <text class="ttl-s" x="314" y="252">Opportunity</text>
+  <text class="fld" x="314" y="272">Contract_Effective_Date__c</text>
+  <text class="fld" x="314" y="288">Contract_Term_Months__c</text>
+  <text class="fld" x="314" y="304">Contract_End_Date__c  (f)</text>
+
+  <rect class="bx-std" x="580" y="230" width="230" height="84"/>
+  <text class="ttl-s" x="594" y="252">OpportunityLineItem</text>
+  <text class="fldk" x="594" y="272">CPQ_Catalog_Item__c</text>
+  <text class="fld" x="594" y="288">CPQ_Charge_Type__c</text>
+  <text class="fldk" x="594" y="304">CPQ_Commit__c</text>
+
+  <rect class="bx" x="880" y="230" width="230" height="84"/>
+  <rect class="cap" x="880" y="230" width="230" height="3"/>
+  <text class="ttl" x="894" y="252">CPQ_Commit__c</text>
+  <text class="fldk" x="894" y="272">Idempotency_Key__c (uniq)</text>
+  <text class="fldk" x="894" y="288">Request_Hash__c  (SHA-256)</text>
+  <text class="fld" x="894" y="304">Response_Snapshot__c · Acting_Rep__c</text>
+
+  <line class="rel-l" x1="512" y1="272" x2="580" y2="272"/>
+  <path class="crow-l" d="M568 272 l12 -6 M568 272 l12 6 M568 266 v12"/>
+  <line class="rel-l" x1="880" y1="272" x2="810" y2="272"/>
+  <path class="crow-l" d="M822 272 l-12 -6 M822 272 l-12 6 M822 266 v12"/>
+  <text class="rlbl" x="826" y="266">wrote</text>
+
+  <line class="rel-l" x1="660" y1="162" x2="660" y2="230"/>
+  <path class="crow-l" d="M660 218 l-6 12 M660 218 l6 12 M654 218 h12"/>
+  <text class="rlbl" x="666" y="198">origin of</text>
+
+  <path class="rel-l" d="M968 162 v40 H770 v28"/>
+  <path class="crow-l" d="M770 218 l-6 12 M770 218 l6 12 M764 218 h12"/>
+  <text class="rlbl" x="800" y="198">prices</text>
+
+  <path class="rel-l" d="M420 314 v24 H995 v-24"/>
+  <path class="crow-l" d="M995 326 l-6 -12 M995 326 l6 -12 M989 326 h12"/>
+  <text class="rlbl" x="638" y="335">committed to</text>
+
+  <!-- ROW 3 -->
+  <rect class="bx-std" x="20" y="420" width="212" height="42"/>
+  <text class="ttl-s" x="34" y="446">Account</text>
+
+  <rect class="bx" x="300" y="420" width="212" height="100"/>
+  <rect class="cap" x="300" y="420" width="212" height="3"/>
+  <text class="ttl" x="314" y="442">Subscription__c</text>
+  <text class="fldk" x="314" y="462">External_Key__c (uniq)</text>
+  <text class="fld" x="314" y="478">Account__c · Opportunity__c</text>
+  <text class="fld" x="314" y="494">Effective_Date__c · Term__c</text>
+  <text class="fld" x="314" y="510">End_Date__c · Status__c</text>
+
+  <rect class="bx" x="580" y="420" width="230" height="100"/>
+  <rect class="cap" x="580" y="420" width="230" height="3"/>
+  <text class="ttl" x="594" y="442">Customer_Entitlement__c</text>
+  <text class="fldk" x="594" y="462">Feature_Code__c</text>
+  <text class="fldk" x="594" y="478">Quantity__c  (aggregated)</text>
+  <text class="fld" x="594" y="494">Metering_Type__c</text>
+  <text class="fld" x="594" y="510">Active_From/To__c · Status__c</text>
+
+  <rect class="bx-dt" x="880" y="420" width="230" height="100"/>
+  <text class="ttl-s" x="894" y="442">LogEntry__c   (Nebula Logger)</text>
+  <text class="fldk" x="894" y="462">Correlation_Id__c  (added)</text>
+  <text class="fld" x="894" y="478">LoggingLevel__c · EntryScenario__c</text>
+  <text class="fld" x="894" y="494">Tags · ExceptionStackTrace__c</text>
+  <text class="rlbl" x="894" y="512">via the event bus — survives rollback (§7.3)</text>
+
+  <line class="rel-l" x1="232" y1="454" x2="300" y2="454"/>
+  <path class="crow-l" d="M288 454 l12 -6 M288 454 l12 6 M288 448 v12"/>
+  <text class="rlbl" x="238" y="448">holds</text>
+
+  <line class="rel" x1="512" y1="470" x2="580" y2="470"/>
+  <path class="crow" d="M568 470 l12 -6 M568 470 l12 6 M568 464 v12"/>
+  <text class="rlbl" x="520" y="464">grants</text>
+
+  <line class="rel-l" x1="406" y1="314" x2="406" y2="420"/>
+  <path class="crow-l" d="M406 408 l-6 12 M406 408 l6 12 M400 408 h12"/>
+  <text class="rlbl" x="412" y="372">produced</text>
+
+  <path class="rel-l" d="M126 142 v264 h360 v14"/>
+  <path class="crow-l" d="M486 420 l-6 -12 M486 420 l6 -12"/>
+  <text class="rlbl" x="132" y="290">typed by</text>
+</svg>

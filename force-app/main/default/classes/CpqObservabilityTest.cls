@@ -109,17 +109,14 @@ private class CpqObservabilityTest {
         CpqCommitResource.commitConfiguration();
         Test.stopTest();
 
-        CPQ_Integration_Log__c log = [
-            SELECT Correlation_Id__c, Endpoint__c, Acting_Rep__c, Opportunity_Id__c, Outcome__c, Duration_Ms__c, Integration_User__c
-            FROM CPQ_Integration_Log__c
-            LIMIT 1
-        ];
-        Assert.areEqual(CpqConstants.OUTCOME_SUCCESS, log.Outcome__c);
-        Assert.areEqual(String.valueOf(opp.Id), log.Opportunity_Id__c);
-        // The rep is carried in the body because Salesforce only ever sees one integration user.
-        Assert.areEqual(UserInfo.getUserName(), log.Acting_Rep__c);
-        Assert.areEqual(UserInfo.getUserName(), log.Integration_User__c);
-        Assert.isNotNull(log.Duration_Ms__c);
+        LogEntryEvent__e log = entryFor(null);
+        Assert.isNotNull(log, 'A successful commit must be logged.');
+        Assert.areEqual(LoggingLevel.INFO.name(), log.LoggingLevel__c);
+        Assert.areEqual(String.valueOf(opp.Id), log.RecordId__c, 'The entry is attached to the deal it describes.');
+        // The rep is carried in the body because Salesforce only ever sees one integration user,
+        // so it goes into the message rather than being inferred from the running user.
+        Assert.isTrue(log.Message__c.contains(UserInfo.getUserName()), 'The acting rep must be attributable.');
+        Assert.isTrue(log.Message__c.contains('ms)'), 'Duration is recorded.');
         // No header was sent, so the server minted one rather than logging a null.
         Assert.isNotNull(log.Correlation_Id__c);
     }
@@ -130,20 +127,25 @@ private class CpqObservabilityTest {
         CpqLogger.error('corr-err', 'POST /cpq/v1/test', 'rep@example.com', null, new CpqException('boom'));
         Test.stopTest();
 
-        CPQ_Integration_Log__c log = [
-            SELECT Outcome__c, Message__c, Stack_Trace__c, Correlation_Id__c
-            FROM CPQ_Integration_Log__c
-            LIMIT 1
-        ];
-        Assert.areEqual(CpqConstants.OUTCOME_ERROR, log.Outcome__c);
-        Assert.areEqual('boom', log.Message__c);
+        LogEntryEvent__e log = entryFor('corr-err');
+        Assert.isNotNull(log, 'An unexpected error must be logged.');
+        Assert.areEqual(LoggingLevel.ERROR.name(), log.LoggingLevel__c);
         Assert.areEqual('corr-err', log.Correlation_Id__c);
+        Assert.isTrue(log.Message__c.contains('boom'), 'The cause is in the log, never in the response.');
+        Assert.isNotNull(log.ExceptionStackTrace__c, 'Nebula captures the trace from the exception itself.');
+        Assert.areEqual('CpqException', log.ExceptionType__c);
     }
 
     @IsTest
     static void logPublishing_survivesTheRollbackOfTheTransactionItDescribes() {
-        // The whole reason logs are platform events: a commit that fails rolls back, and a log row
-        // inserted inside that transaction would roll back with it.
+        // The reason logging goes through the event bus: a commit that fails rolls back, and a log
+        // row inserted inside that transaction would roll back with it.
+        //
+        // A test can only assert that the entry was published despite the rollback. Whether the
+        // platform then commits it independently is a property of LogEntryEvent__e's
+        // PublishImmediately behaviour, which cannot be exercised in a test context and was
+        // verified directly against the org instead: a Nebula entry written inside a rolled-back
+        // transaction is still queryable afterwards.
         Test.startTest();
         Savepoint sp = Database.setSavepoint();
         insert new Account(Name = 'Rolled back');
@@ -152,10 +154,24 @@ private class CpqObservabilityTest {
         Test.stopTest();
 
         Assert.areEqual(
-            1,
-            [SELECT COUNT() FROM CPQ_Integration_Log__c WHERE Correlation_Id__c = 'corr-rollback'],
-            'The log must outlive the rollback.'
+            0,
+            [SELECT COUNT() FROM Account WHERE Name = 'Rolled back'],
+            'The transaction really did roll back.'
         );
+        Assert.isNotNull(entryFor('corr-rollback'), 'The log must outlive the rollback.');
+    }
+
+    /**
+     * Nebula buffers entries and delivers them through the event bus, which in a test context is
+     * the mock bus. Delivering it here is what turns published events into queryable rows.
+     */
+    private static LogEntryEvent__e entryFor(String correlationId) {
+        for (LogEntryEvent__e event : CpqLogger.published) {
+            if (correlationId == null || correlationId.equals(event.Correlation_Id__c)) {
+                return event;
+            }
+        }
+        return null;
     }
 
     // =====================================================================

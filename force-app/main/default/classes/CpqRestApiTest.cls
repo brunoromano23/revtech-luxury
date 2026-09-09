@@ -315,15 +315,25 @@ private class CpqRestApiTest {
         CpqValidateResource.validate();
         Test.stopTest();
 
-        // Platform events publish after Test.stopTest(), so the durable row exists by now.
-        List<CPQ_Integration_Log__c> logs = [
-            SELECT Correlation_Id__c, Endpoint__c, Outcome__c, Violation_Codes__c
-            FROM CPQ_Integration_Log__c
-        ];
-        Assert.areEqual(1, logs.size());
-        Assert.areEqual('corr-12345', logs[0].Correlation_Id__c);
-        Assert.areEqual(CpqConstants.OUTCOME_VALIDATION_FAILED, logs[0].Outcome__c);
-        // Sub-floor attempts are commercially interesting data, not noise.
-        Assert.areEqual(CpqConstants.V_PLAN_BELOW_FLOOR, logs[0].Violation_Codes__c);
+        List<LogEntryEvent__e> logs = new List<LogEntryEvent__e>();
+        for (LogEntryEvent__e event : CpqLogger.published) {
+            if ('corr-12345'.equals(event.Correlation_Id__c)) {
+                logs.add(event);
+            }
+        }
+        Assert.areEqual(1, logs.size(), 'The caller\'s correlation ID is carried onto the log entry.');
+        Assert.areEqual(LoggingLevel.WARN.name(), logs[0].LoggingLevel__c);
+        Assert.areEqual(
+            'POST /cpq/v1/configurations/validate',
+            logs[0].EntryScenario__c,
+            'Scenario groups the transaction by the endpoint that drove it.'
+        );
+
+        // Sub-floor attempts are commercially interesting data, not noise. The violation codes are
+        // tags rather than a delimited string, so counting them is a report and not a text search.
+        Assert.isTrue(
+            logs[0].Tags__c != null && logs[0].Tags__c.contains(CpqConstants.V_PLAN_BELOW_FLOOR),
+            'The violation code must be tagged, found: ' + logs[0].Tags__c
+        );
     }
 }
