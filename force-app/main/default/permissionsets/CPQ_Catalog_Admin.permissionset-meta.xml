@@ -230,4 +230,14 @@
         <field>Customer_Entitlement__c.Status__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <!-- Without these the provisioned records exist but nothing in the UI reaches them: a hidden
+         tab is absent from the App Launcher, not merely absent from a nav bar. -->
+    <tabSettings>
+        <tab>Subscription__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Customer_Entitlement__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
 </PermissionSet>
