@@ -2,17 +2,26 @@
 
 Solution design for the Luxury Presence RevTech case study — a custom CPQ on Salesforce.
 
-| Document | File |
-|---|---|
-| **Solution Design** (submission copy) | [`Luxury Presence — Custom CPQ Solution Design.pdf`](Luxury%20Presence%20%E2%80%94%20Custom%20CPQ%20Solution%20Design.pdf) |
-| Markdown source | [`01-solution-design.md`](01-solution-design.md) |
+| Document | Audience | File |
+|---|---|---|
+| **Solution Design** (submission copy) | Engineering | [`Luxury Presence — Custom CPQ Solution Design.pdf`](Luxury%20Presence%20%E2%80%94%20Custom%20CPQ%20Solution%20Design.pdf) |
+| Markdown source | | [`01-solution-design.md`](01-solution-design.md) |
+| **Business Briefing** | Operations and Business | [`Luxury Presence — CPQ Business Briefing.pdf`](Luxury%20Presence%20%E2%80%94%20CPQ%20Business%20Briefing.pdf) |
+| Markdown source | | [`02-business-briefing.md`](02-business-briefing.md) |
 
-The PDF is now **generated from the Markdown**, so the two cannot drift. Regenerate it with:
+Both PDFs are **generated from the Markdown**, so the two cannot drift. Regenerate them with:
 
 ```bash
 ./documents/tools/build-pdf.sh documents/01-solution-design.md \
   "documents/Luxury Presence — Custom CPQ Solution Design.pdf"
+
+TEMPLATE=documents/tools/template-head-briefing.html \
+  ./documents/tools/build-pdf.sh documents/02-business-briefing.md \
+  "documents/Luxury Presence — CPQ Business Briefing.pdf"
 ```
+
+The two documents share `assemble.py` and differ only in their stylesheet, which carries the
+running header and footer. `TEMPLATE` selects it; it defaults to the solution design's.
 
 ## How the build works
 

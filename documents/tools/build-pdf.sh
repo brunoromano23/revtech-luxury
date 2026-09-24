@@ -30,8 +30,12 @@ trap 'rm -rf "$WORK"' EXIT
 echo "› rendering markdown"
 npx --yes marked --gfm -i "$SRC" -o "$WORK/body.html"
 
+# A second document in the set carries its own running head and footer, so the stylesheet is
+# overridable. Defaults to the solution design's.
+TEMPLATE="${TEMPLATE:-$HERE/template-head.html}"
+
 echo "› assembling document"
-python3 "$HERE/assemble.py" "$WORK/body.html" "$SRC_DIR" "$WORK/doc.html" "$HERE/template-head.html"
+python3 "$HERE/assemble.py" "$WORK/body.html" "$SRC_DIR" "$WORK/doc.html" "$TEMPLATE"
 
 echo "› printing pdf"
 python3 -m weasyprint "$WORK/doc.html" "$WORK/out.pdf" --base-url "$SRC_DIR/"

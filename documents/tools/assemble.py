@@ -159,7 +159,9 @@ def tag_callouts():
         first = bq.find("p")
         if not first:
             continue
-        if re.match(r"^D-\d+\s*·\s*DESIGN DECISION", first.get_text().strip(), re.I):
+        # D-n · DESIGN DECISION in the solution design, REC-n · RECOMMENDATION in the business
+        # briefing. Any "<ID> · <LABEL IN CAPS>" opener is an argued choice and renders as one.
+        if re.match(r"^[A-Z]{1,3}-\d+\s*·\s*[A-Z][A-Z ]+", first.get_text().strip()):
             first["class"] = "callout-head"
         else:
             bq["class"] = bq.get("class", []) + ["plain"]
